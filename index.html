@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Thẩm Định Tài Chính Dự Án</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .formula-box {
+            background-color: #f8fafc;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.375rem;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .metric-card {
+            transition: transform 0.2s;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1; 
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8; 
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-700 mb-2">
+                <i class="fa-solid fa-chart-line mr-2"></i>Ứng Dụng Thẩm Định Dự Án
+            </h1>
+            <p class="text-gray-600">Tính toán các chỉ số NPV, IRR, MIRR, PI, PP, DPP với công thức giải thích chi tiết</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Cột trái: Nhập liệu -->
+            <div class="lg:col-span-4 space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
+                        <i class="fa-solid fa-keyboard text-blue-500 mr-2"></i>Nhập số liệu
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Vốn đầu tư ban đầu (Năm 0)</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm">-</span>
+                                </div>
+                                <input type="number" id="invest" value="1000" class="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Ví dụ: 1000">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">*Nhập số dương, phần mềm tự hiểu là dòng tiền âm.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Lãi suất chiết khấu (r) %</label>
+                            <input type="number" id="rate" value="20" step="0.1" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Số năm dự án</label>
+                            <input type="number" id="years" value="5" min="1" max="20" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="pt-4 border-t">
+                            <h3 class="text-md font-medium text-gray-800 mb-3">Dòng tiền các năm</h3>
+                            <div id="cashFlowInputs" class="space-y-3 max-h-60 overflow-y-auto pr-2">
+                                <!-- Inputs will be generated here -->
+                            </div>
+                        </div>
+
+                        <button onclick="calculateMetrics()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition duration-200 shadow-md flex justify-center items-center">
+                            <i class="fa-solid fa-calculator mr-2"></i> Bắt đầu tính toán
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột phải: Kết quả & Giải thích -->
+            <div class="lg:col-span-8 space-y-6">
+                <!-- Dashboard Kết quả nhanh -->
+                <div class="glass-card rounded-2xl p-6 hidden" id="resultsSection">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2 flex justify-between items-center">
+                        <span><i class="fa-solid fa-square-poll-vertical text-green-500 mr-2"></i>Bảng Tóm Tắt Chỉ Số</span>
+                        <span id="conclusionBadge" class="text-sm font-medium px-3 py-1 rounded-full"></span>
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <!-- Thẻ NPV -->
+                        <div class="metric-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <div class="text-sm text-gray-500 font-medium">NPV</div>
+                            <div class="text-2xl font-bold text-gray-800 my-1" id="valNPV">--</div>
+                            <div class="text-xs" id="sttNPV">--</div>
+                        </div>
+                        <!-- Thẻ IRR -->
+                        <div class="metric-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <div class="text-sm text-gray-500 font-medium">IRR</div>
+                            <div class="text-2xl font-bold text-gray-800 my-1" id="valIRR">--</div>
+                            <div class="text-xs" id="sttIRR">--</div>
+                        </div>
+                        <!-- Thẻ MIRR -->
+                        <div class="metric-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <div class="text-sm text-gray-500 font-medium">MIRR</div>
+                            <div class="text-2xl font-bold text-gray-800 my-1" id="valMIRR">--</div>
+                            <div class="text-xs" id="sttMIRR">--</div>
+                        </div>
+                        <!-- Thẻ PI -->
+                        <div class="metric-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <div class="text-sm text-gray-500 font-medium">PI (Chỉ số sinh lời)</div>
+                            <div class="text-2xl font-bold text-gray-800 my-1" id="valPI">--</div>
+                            <div class="text-xs" id="sttPI">--</div>
+                        </div>
+                        <!-- Thẻ PP -->
+                        <div class="metric-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <div class="text-sm text-gray-500 font-medium">Hoàn vốn (PP)</div>
+                            <div class="text-2xl font-bold text-gray-800 my-1" id="valPP">--</div>
+                            <div class="text-xs text-gray-400">Không chiết khấu</div>
+                        </div>
+                        <!-- Thẻ DPP -->
+                        <div class="metric-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <div class="text-sm text-gray-500 font-medium">Hoàn vốn (DPP)</div>
+                            <div class="text-2xl font-bold text-gray-800 my-1" id="valDPP">--</div>
+                            <div class="text-xs text-gray-400">Có chiết khấu</div>
+                        </div>
+                    </div>
+
+                    <!-- Lời giải chi tiết -->
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2 mt-8">
+                        <i class="fa-solid fa-book-open text-indigo-500 mr-2"></i>Lời Giải Chi Tiết
+                    </h2>
+                    
+                    <div class="space-y-6" id="explanations">
+                        <!-- Nội dung giải thích sẽ được JS sinh ra ở đây -->
+                    </div>
+
+                </div>
+                
+                <!-- Hướng dẫn (Hiện khi chưa tính toán) -->
+                <div id="introBox" class="glass-card rounded-2xl p-10 text-center flex flex-col justify-center items-center h-full border-dashed border-2 border-gray-300">
+                    <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-4 text-blue-500 text-3xl">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-2">Chưa có dữ liệu</h3>
+                    <p class="text-gray-500 max-w-md">Hãy nhập thông số của dự án ở cột bên trái và bấm <b>"Bắt đầu tính toán"</b> để xem kết quả và lời giải chi tiết từng bước.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- UI LOGIC ---
+        const yearsInput = document.getElementById('years');
+        const cashFlowInputsContainer = document.getElementById('cashFlowInputs');
+
+        // Khởi tạo dòng tiền mẫu
+        const sampleCFs = [500, -100, 400, 1000, 1800];
+
+        function generateCashFlowInputs() {
+            const years = parseInt(yearsInput.value) || 0;
+            let html = '';
+            for (let i = 1; i <= years; i++) {
+                const sampleVal = sampleCFs[i-1] !== undefined ? sampleCFs[i-1] : 0;
+                html += `
+                    <div class="flex items-center">
+                        <div class="w-20 text-sm font-medium text-gray-600">Năm ${i}:</div>
+                        <input type="number" id="cf_${i}" value="${sampleVal}" class="flex-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    </div>
+                `;
+            }
+            cashFlowInputsContainer.innerHTML = html;
+        }
+
+        yearsInput.addEventListener('input', generateCashFlowInputs);
+        // Chạy lần đầu
+        generateCashFlowInputs();
+
+
+        // --- MATH LOGIC & RENDER ---
+        const formatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
+        const formatPercent = (val) => formatter.format(val * 100) + '%';
+
+        function calculateMetrics() {
+            // Lấy dữ liệu
+            const invest = parseFloat(document.getElementById('invest').value) || 0;
+            const rateStr = document.getElementById('rate').value;
+            const rate = (parseFloat(rateStr) || 0) / 100;
+            const years = parseInt(document.getElementById('years').value) || 0;
+            
+            let cfs = [-Math.abs(invest)]; // Năm 0 luôn âm
+            for (let i = 1; i <= years; i++) {
+                let val = parseFloat(document.getElementById(`cf_${i}`).value) || 0;
+                cfs.push(val);
+            }
+
+            // Ẩn Intro, Hiện Results
+            document.getElementById('introBox').classList.add('hidden');
+            document.getElementById('resultsSection').classList.remove('hidden');
+
+            // 1. Tính NPV
+            let npv = 0;
+            let npvSteps = [];
+            let discountedCfs = [];
+            for (let t = 0; t <= years; t++) {
+                let dcf = cfs[t] / Math.pow(1 + rate, t);
+                discountedCfs.push(dcf);
+                npv += dcf;
+                if(t===0) npvSteps.push(`${cfs[t]}`);
+                else npvSteps.push(`\\(\\frac{${cfs[t]}}{(1+${rate})^{${t}}}\\)`);
+            }
+
+            // 2. Tính IRR (Phương pháp Bisection)
+            let irr = computeIRR(cfs);
+
+            // 3. Tính MIRR & PI
+            let pvOutflows = 0;
+            let pvInflows = 0;
+            let fvInflows = 0;
+
+            for (let t = 0; t <= years; t++) {
+                if (cfs[t] < 0) {
+                    pvOutflows += cfs[t] / Math.pow(1 + rate, t);
+                } else if (cfs[t] > 0) {
+                    pvInflows += cfs[t] / Math.pow(1 + rate, t);
+                    fvInflows += cfs[t] * Math.pow(1 + rate, years - t);
+                }
+            }
+
+            let pi = Math.abs(pvOutflows) > 0 ? pvInflows / Math.abs(pvOutflows) : 0;
+            let mirr = Math.abs(pvOutflows) > 0 ? Math.pow(fvInflows / Math.abs(pvOutflows), 1 / years) - 1 : 0;
+
+            // 4. Tính PP & DPP
+            let ppInfo = computePayback(cfs);
+            let dppInfo = computePayback(discountedCfs);
+
+            // Cập nhật UI Thẻ Tóm tắt
+            document.getElementById('valNPV').innerText = formatter.format(npv);
+            document.getElementById('sttNPV').innerHTML = npv > 0 ? '<span class="text-green-600"><i class="fa-solid fa-check"></i> Khả thi (> 0)</span>' : '<span class="text-red-600"><i class="fa-solid fa-xmark"></i> Không khả thi</span>';
+
+            if(irr !== null) {
+                document.getElementById('valIRR').innerText = formatPercent(irr);
+                document.getElementById('sttIRR').innerHTML = irr > rate ? `<span class="text-green-600"><i class="fa-solid fa-check"></i> > Lãi suất (${rate*100}%)</span>` : `<span class="text-red-600"><i class="fa-solid fa-xmark"></i> < Lãi suất</span>`;
+            } else {
+                document.getElementById('valIRR').innerText = 'N/A';
+                document.getElementById('sttIRR').innerText = 'Không xác định';
+            }
+
+            document.getElementById('valMIRR').innerText = formatPercent(mirr);
+            document.getElementById('sttMIRR').innerHTML = mirr > rate ? `<span class="text-green-600">Khả thi</span>` : `<span class="text-red-600">Không khả thi</span>`;
+
+            document.getElementById('valPI').innerText = formatter.format(pi);
+            document.getElementById('sttPI').innerHTML = pi > 1 ? '<span class="text-green-600"><i class="fa-solid fa-check"></i> > 1 (Tốt)</span>' : '<span class="text-red-600"><i class="fa-solid fa-xmark"></i> < 1</span>';
+
+            document.getElementById('valPP').innerText = ppInfo.val !== -1 ? `${formatter.format(ppInfo.val)} năm` : 'Không hoàn';
+            document.getElementById('valDPP').innerText = dppInfo.val !== -1 ? `${formatter.format(dppInfo.val)} năm` : 'Không hoàn';
+
+            // Cập nhật Kết luận chung
+            const badge = document.getElementById('conclusionBadge');
+            if (npv > 0 && irr > rate) {
+                badge.className = "text-sm font-medium px-4 py-2 rounded-full bg-green-100 text-green-700 border border-green-200";
+                badge.innerHTML = '<i class="fa-solid fa-award mr-1"></i> Dự án Đáng Đầu Tư';
+            } else {
+                badge.className = "text-sm font-medium px-4 py-2 rounded-full bg-red-100 text-red-700 border border-red-200";
+                badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> Từ chối Dự án';
+            }
+
+            // Sinh lời giải chi tiết HTML
+            generateExplanationsHTML(rate, years, cfs, discountedCfs, npv, irr, mirr, pi, pvOutflows, pvInflows, fvInflows, ppInfo, dppInfo);
+        }
+
+        // --- HÀM TÍNH TOÁN CORE ---
+        function computeIRR(cfs) {
+            // Nội suy đơn giản (Bisection)
+            let low = -0.99;
+            let high = 5.0; // max 500%
+            let guess = 0;
+            for(let i=0; i<1000; i++) {
+                guess = (low + high) / 2;
+                let npv = 0;
+                for(let t=0; t<cfs.length; t++) {
+                    npv += cfs[t] / Math.pow(1+guess, t);
+                }
+                if(Math.abs(npv) < 0.00001) return guess;
+                // Giả định dòng tiền thông thường (âm đầu, dương sau)
+                if(npv > 0) low = guess;
+                else high = guess;
+            }
+            // Nếu không hội tụ
+            return (Math.abs(high - low) < 0.001) ? guess : null;
+        }
+
+        function computePayback(arr) {
+            let cum = 0;
+            let table = [];
+            for(let t = 0; t < arr.length; t++) {
+                cum += arr[t];
+                table.push({ year: t, val: arr[t], cum: cum });
+                if(cum >= 0 && t > 0 && table[t-1].cum < 0) {
+                    // Nội suy
+                    let prevCum = Math.abs(table[t-1].cum);
+                    let exact = (t - 1) + (prevCum / arr[t]);
+                    return { val: exact, table: table, crossYear: t };
+                }
+            }
+            return { val: -1, table: table, crossYear: -1 };
+        }
+
+        // --- RENDER EXPLANATIONS ---
+        function generateExplanationsHTML(rate, n, cfs, dcfs, npv, irr, mirr, pi, pvOut, pvIn, fvIn, pp, dpp) {
+            const container = document.getElementById('explanations');
+            let html = '';
+
+            // 1. NPV
+            let npvMath = cfs.map((cf, i) => {
+                if(i===0) return cf;
+                return `\\(\\frac{${cf}}{(1 + ${rate})^${i}}\\)`;
+            }).join(' + ').replace(/\+ -/g, '- ');
+            
+            let npvCalcStr = dcfs.map(d => formatter.format(d)).join(' + ').replace(/\+ -/g, '- ');
+
+            html += `
+                <div class="mb-8">
+                    <h3 class="text-lg font-bold text-blue-800 mb-2">1. Giá trị hiện tại ròng (NPV)</h3>
+                    <p class="text-sm text-gray-600 mb-2">Công thức tổng quát: NPV = Σ [ CF<sub>t</sub> / (1+r)<sup>t</sup> ]</p>
+                    <div class="formula-box font-mono text-sm">
+                        NPV = ${cfs[0]} + ${cfs.slice(1).map((cf,i) => `${cf} / (1+${rate})<sup>${i+1}</sup>`).join(' + ').replace(/\+ -/g, '- ')}<br>
+                        NPV = ${npvCalcStr}<br>
+                        <strong>NPV = ${formatter.format(npv)}</strong>
+                    </div>
+                    <p class="text-sm text-gray-700"><strong>Kết luận:</strong> Vì NPV ${npv > 0 ? '> 0' : '< 0'}, dự án ${npv > 0 ? 'mang lại giá trị thặng dư và khả thi.' : 'không đủ bù đắp chi phí vốn.'}</p>
+                </div>
+            `;
+
+            // 2. IRR
+            html += `
+                <div class="mb-8">
+                    <h3 class="text-lg font-bold text-blue-800 mb-2">2. Tỷ suất sinh lời nội bộ (IRR)</h3>
+                    <p class="text-sm text-gray-600 mb-2">IRR là nghiệm r của phương trình NPV = 0.</p>
+                    <div class="formula-box font-mono text-sm">
+                        Σ [ CF<sub>t</sub> / (1+IRR)<sup>t</sup> ] = 0<br>
+                        => Dùng phương pháp nội suy giải phương trình ta được:<br>
+                        <strong>IRR ≈ ${irr !== null ? formatPercent(irr) : 'Không xác định'}</strong>
+                    </div>
+                    <p class="text-sm text-gray-700"><strong>Kết luận:</strong> So sánh với mức chiết khấu yêu cầu r = ${rate*100}%, ta có IRR ${irr > rate ? '>' : '<'} r. Do đó, dự án ${irr > rate ? 'đạt hiệu quả sinh lời kỳ vọng.' : 'chưa đạt mức sinh lời kỳ vọng.'}</p>
+                </div>
+            `;
+
+            // 3. PI
+            html += `
+                <div class="mb-8">
+                    <h3 class="text-lg font-bold text-blue-800 mb-2">3. Chỉ số lợi nhuận (PI - BCR)</h3>
+                    <p class="text-sm text-gray-600 mb-2">PI = Tổng hiện giá dòng tiền dương / | Tổng hiện giá dòng tiền âm |</p>
+                    <div class="formula-box font-mono text-sm">
+                        PV(Thu) = ${formatter.format(pvIn)}<br>
+                        PV(Chi) = |${formatter.format(pvOut)}|<br>
+                        PI = ${formatter.format(pvIn)} / ${formatter.format(Math.abs(pvOut))} <br>
+                        <strong>PI = ${formatter.format(pi)}</strong>
+                    </div>
+                    <p class="text-sm text-gray-700"><strong>Kết luận:</strong> Cứ 1 đồng vốn quy về hiện tại thu được ${formatter.format(pi)} đồng. Vì PI ${pi > 1 ? '> 1' : '< 1'}, dự án ${pi > 1 ? 'tốt.' : 'kém.'}</p>
+                </div>
+            `;
+
+            // 4. MIRR
+            html += `
+                <div class="mb-8">
+                    <h3 class="text-lg font-bold text-blue-800 mb-2">4. IRR có điều chỉnh (MIRR)</h3>
+                    <p class="text-sm text-gray-600 mb-2">Giả định dòng tiền dương tái đầu tư với lãi suất r, dòng tiền âm chiết khấu về năm 0.</p>
+                    <div class="formula-box font-mono text-sm">
+                        FV(Thu nhập năm cuối) = ${formatter.format(fvIn)}<br>
+                        PV(Chi phí năm 0) = |${formatter.format(pvOut)}|<br>
+                        MIRR = [ FV(Thu) / PV(Chi) ]<sup>(1/${n})</sup> - 1<br>
+                        MIRR = [ ${formatter.format(fvIn)} / ${formatter.format(Math.abs(pvOut))} ]<sup>(1/${n})</sup> - 1<br>
+                        <strong>MIRR = ${formatPercent(mirr)}</strong>
+                    </div>
+                </div>
+            `;
+
+            // 5. Payback
+            const renderTable = (tableData) => {
+                let tHTML = `<table class="min-w-full text-left text-sm border bg-white mt-2 mb-2">
+                    <thead class="bg-gray-50 border-b"><tr>
+                        <th class="p-2 border-r">Năm</th>
+                        <th class="p-2 border-r">Dòng tiền</th>
+                        <th class="p-2">Dòng tiền lũy kế</th>
+                    </tr></thead><tbody>`;
+                tableData.forEach(row => {
+                    tHTML += `<tr class="border-b">
+                        <td class="p-2 border-r">${row.year}</td>
+                        <td class="p-2 border-r">${formatter.format(row.val)}</td>
+                        <td class="p-2 ${row.cum >= 0 ? 'text-green-600 font-semibold' : 'text-red-500'}">${formatter.format(row.cum)}</td>
+                    </tr>`;
+                });
+                tHTML += `</tbody></table>`;
+                return tHTML;
+            };
+
+            html += `
+                <div class="mb-8">
+                    <h3 class="text-lg font-bold text-blue-800 mb-2">5. Thời gian hoàn vốn (PP & DPP)</h3>
+                    <p class="text-sm text-gray-800 font-semibold">a. Thời gian hoàn vốn không chiết khấu (PP)</p>
+                    ${renderTable(pp.table)}
+                    `;
+            if(pp.val !== -1) {
+                let yCross = pp.crossYear;
+                let yPrev = yCross - 1;
+                let prevCum = Math.abs(pp.table[yPrev].cum);
+                let cfCross = pp.table[yCross].val;
+                html += `<div class="formula-box font-mono text-sm mt-2">
+                    PP = ${yPrev} + ( |${formatter.format(prevCum)}| / ${formatter.format(cfCross)} ) <br>
+                    <strong>PP = ${formatter.format(pp.val)} năm</strong>
+                </div>`;
+            } else {
+                html += `<div class="text-red-600 mt-2">Dự án không thể hoàn vốn không chiết khấu trong ${n} năm.</div>`;
+            }
+
+            html += `<p class="text-sm text-gray-800 font-semibold mt-6">b. Thời gian hoàn vốn có chiết khấu (DPP)</p>
+                    ${renderTable(dpp.table)}
+            `;
+            if(dpp.val !== -1) {
+                let yCross = dpp.crossYear;
+                let yPrev = yCross - 1;
+                let prevCum = Math.abs(dpp.table[yPrev].cum);
+                let cfCross = dpp.table[yCross].val;
+                html += `<div class="formula-box font-mono text-sm mt-2">
+                    DPP = ${yPrev} + ( |${formatter.format(prevCum)}| / ${formatter.format(cfCross)} ) <br>
+                    <strong>DPP = ${formatter.format(dpp.val)} năm</strong>
+                </div>`;
+            } else {
+                html += `<div class="text-red-600 mt-2">Dòng tiền chiết khấu lũy kế đến năm cuối vẫn âm, dự án không hoàn vốn.</div>`;
+            }
+            html += `</div>`;
+
+            container.innerHTML = html;
+        }
+
+    </script>
+</body>
+</html>
